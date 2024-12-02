@@ -1,5 +1,6 @@
 import csv
 import sys
+from collections import deque
 
 from util import Node, StackFrontier, QueueFrontier
 
@@ -88,42 +89,38 @@ def shortest_path(source, target):
     """
     Returns the shortest list of (movie_id, person_id) pairs
     that connect the source to the target.
-
     If no possible path, returns None.
     """
-    from util import Node, QueueFrontier
+    # Initialize the frontier with the starting node
+    frontier = deque([(source, [])])
 
-    # Initialize the frontier with the source node
-    start = Node(state=source, parent=None, action=None)
-    frontier = QueueFrontier()
-    frontier.add(start)
-
-    # Initialize an empty explored set
+    # Track visited nodes to avoid cycles
     explored = set()
 
-    while not frontier.empty():
-        # Remove a node from the frontier
-        node = frontier.remove()
+    while frontier:
+        # Remove the first node from the frontier
+        current_person, path = frontier.popleft()
 
-        # If the target is found, return the path
-        if node.state == target:
-            path = []
-            while node.parent is not None:
-                path.append((node.action, node.state))
-                node = node.parent
-            path.reverse()
-            return path
+        # Mark the person as explored
+        explored.add(current_person)
 
-        # Mark node as explored
-        explored.add(node.state)
+        # Get neighbors (actors connected by movies)
+        for movie_id, person_id in neighbors_for_person(current_person):
+            # Skip already explored nodes
+            if person_id in explored:
+                continue
 
-        # Add neighbors to the frontier
-        for movie_id, person_id in neighbors_for_person(node.state):
-            if person_id not in explored and not frontier.contains_state(person_id):
-                child = Node(state=person_id, parent=node, action=movie_id)
-                frontier.add(child)
+            # Create the new path
+            new_path = path + [(movie_id, person_id)]
 
-    # If no connection is found, return None
+            # Check if we've reached the target
+            if person_id == target:
+                return new_path
+
+            # Add the neighbor to the frontier
+            frontier.append((person_id, new_path))
+
+    # If no path is found
     return None
 
 
